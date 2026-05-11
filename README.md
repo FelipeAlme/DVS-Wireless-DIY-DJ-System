@@ -188,6 +188,17 @@ Current implementation:
 
 ---
 
+# ESP32 MAC Address Configuration
+
+Before using the system, you must discover the MAC address of the ESP32-S3 receiver board.
+
+The ESP32-C3 transmitter uses this MAC address to send RPM data through ESP-NOW.
+
+You must replace the receiver MAC address inside the ESP32-C3 transmitter code.
+
+
+---
+
 # Project Goals
 
 * Create an affordable wireless DVS system
