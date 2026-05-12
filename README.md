@@ -155,6 +155,7 @@ WiFi.h
 esp_now.h
 Wire.h
 driver/i2s.h
+Adafruit_NeoPixel.h
 ```
 
 No additional external libraries are required.
