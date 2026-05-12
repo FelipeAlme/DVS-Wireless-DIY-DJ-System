@@ -9,6 +9,7 @@
 #include <esp_now.h>
 #include <driver/i2s.h>
 #include <math.h>
+#include <Adafruit_NeoPixel.h>
 
 #include "timecode.h"
 
@@ -24,9 +25,15 @@
 // RGB LED
 // =====================================================
 
-#define LED_R 46
-#define LED_G 45
-#define LED_B 44
+
+#define LED_PIN 48
+#define NUM_LEDS 1
+
+Adafruit_NeoPixel led(
+  NUM_LEDS,
+  LED_PIN,
+  NEO_GRB + NEO_KHZ800
+);
 
 // =====================================================
 // AUDIO CONFIG
@@ -85,12 +92,24 @@ int calibrationCount = 0;
 
 void setLED(bool state) {
 
-  digitalWrite(LED_R, LOW);
-  digitalWrite(LED_G, LOW);
-  digitalWrite(LED_B, LOW);
+  if(state) {
 
-  if(state) digitalWrite(LED_G, HIGH);
-  else       digitalWrite(LED_R, HIGH);
+    // VERDE
+    led.setPixelColor(
+      0,
+      led.Color(0, 255, 0)
+    );
+
+  } else {
+
+    // VERMELHO
+    led.setPixelColor(
+      0,
+      led.Color(255, 0, 0)
+    );
+  }
+
+  led.show();
 }
 
 // =====================================================
@@ -268,11 +287,11 @@ void setup() {
 
   Serial.begin(115200);
 
-  pinMode(LED_R, OUTPUT);
-  pinMode(LED_G, OUTPUT);
-  pinMode(LED_B, OUTPUT);
+led.begin();
 
-  setLED(false);
+led.setBrightness(50);
+
+setLED(false);
 
   WiFi.mode(WIFI_STA);
   WiFi.setSleep(false);
