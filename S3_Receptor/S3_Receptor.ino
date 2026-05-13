@@ -40,7 +40,7 @@ Adafruit_NeoPixel led(
 // =====================================================
 
 #define SAMPLE_RATE      44100
-#define DMA_BUF_LEN      32
+#define DMA_BUF_LEN      16
 #define DMA_BUF_COUNT    3
 
 // =====================================================
@@ -50,7 +50,7 @@ Adafruit_NeoPixel led(
 float DEADZONE    = 0.05f;
 float OUTPUT_GAIN = 0.90f;
 float MAX_RATIO   = 1.20f;
-float SMOOTHING   = 0.08f;
+float SMOOTHING   = 1.75f;
 
 // =====================================================
 // ESP-NOW DATA
