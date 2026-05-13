@@ -37,7 +37,7 @@ uint8_t receiverMAC[] = {
 // =====================================================
 
 // smoothing ultra rápido
-float SMOOTHING = 0.08f;
+float SMOOTHING = 1.00f;
 
 // deadzone
 float DEADZONE = 0.8f;
