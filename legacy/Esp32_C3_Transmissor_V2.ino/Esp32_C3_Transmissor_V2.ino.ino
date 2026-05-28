@@ -1,4 +1,4 @@
-/*
+02/*
 ========================================================
  ESP32-C3 TRANSMISSOR DVS / PHASE DIY
  ULTRA LOW LATENCY VERSION
@@ -37,7 +37,7 @@ uint8_t receiverMAC[] = {
 // =====================================================
 
 // smoothing ultra rápido
-float SMOOTHING = 1.00f;
+float SMOOTHING = 0.08f;
 
 // deadzone
 float DEADZONE = 0.8f;

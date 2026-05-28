@@ -1,246 +1,87 @@
-# DVS-Wireless-DIY-DJ-System
+# DVS Wireless DIY DJ System
 
-A low-cost DIY wireless DVS system inspired by modern wireless vinyl control solutions.
+Sistema DIY experimental de DVS wireless usando transmissores ESP32-C3, comunicacao ESP-NOW e receiver ESP32-S3 gerando timecode CV02 por DAC I2S.
 
-This project is **NOT a replacement for Phase DJ** and does not aim to achieve the same industrial precision, latency, reliability, or calibration quality. Instead, it is an accessible and affordable alternative for makers, DJs, students, and developers who want to experiment with wireless DVS technology using ESP32 boards.
+Este projeto e para estudo, prototipagem e desenvolvimento. Nao e um substituto comercial para sistemas profissionais de DVS wireless.
 
-If you want the same level of refinement, precision, robustness, and professional reliability as Phase DJ, the best option is still purchasing an original commercial system.
-
-This project focuses on:
-
-* simplicity
-* low cost
-* DIY accessibility
-* experimentation
-* open development
-* learning
-
----
-
-# Features
-
-* Wireless DVS control
-* ESP-NOW ultra low latency communication
-* Real-time timecode generation
-* Stereo 16-bit WAV timecode playback
-* Reverse scratching support
-* Automatic RPM calibration
-* Pitch tracking
-* Real vinyl movement detection
-* PCM5102 I2S DAC support
-* ESP32-based architecture
-* Fully DIY and customizable
-
----
-
-# How It Works
-
-The system is divided into two devices:
-
-## 1. ESP32-C3 Transmitter (Mounted on Vinyl)
-
-The transmitter:
-
-* reads platter movement using an MPU6050 gyroscope
-* detects platter speed and direction
-* calculates RPM in real time
-* sends movement data wirelessly using ESP-NOW
-
-The ESP32-C3 is mounted directly on top of the vinyl.
-
----
-
-## 2. ESP32-S3 Receiver (Audio Generator)
-
-The receiver:
-
-* receives RPM data from the ESP32-C3
-* controls playback speed of a stereo timecode WAV
-* generates real-time DVS audio through I2S
-* outputs audio to a PCM5102 DAC
-* supports reverse playback and scratching
-
-The generated timecode signal can then be connected to DVS software through a DJ mixer or audio interface.
-
----
-
-# Important Notes
-
-This is a DIY experimental project.
-
-Compared to professional systems like Phase DJ:
-
-* latency may vary
-* precision may vary
-* gyro drift may occur
-* tracking stability depends on calibration and hardware quality
-* scratch performance depends on tuning
-
-Professional systems use:
-
-* proprietary firmware
-* industrial calibration
-* custom RF protocols
-* advanced filtering
-* specialized hardware
-
-This project uses affordable off-the-shelf components and community-developed code.
-
----
-
-# Hardware Required
-
-## Receiver
-
-* ESP32-S3
-* PCM5102 DAC
-
-## Transmitter
-
-* ESP32-C3
-* MPU6050 gyroscope
-
-## Other
-
-* Turntable
-* RCA cables
-* USB power supply
-* Vinyl record
-
----
-
-# Wiring
-
-## PCM5102 → ESP32-S3
+## Estrutura Publicada
 
 ```text
-BCK   -> GPIO 2
-LRCK  -> GPIO 1
-DATA  -> GPIO 42
+firmware/transmitter_c3_mpu6050_rgb_catodo/
+firmware/transmitter_c3_bmi160_rgb_catodo/
+firmware/receiver_s3_i2s_dual_cv02/
+assets/
+docs/
+legacy/
 ```
 
----
+As pastas `apps/`, `tools/`, `drivers/` e firmwares de teste internos ficam fora deste branch.
 
-## MPU6050 → ESP32-C3
+## Firmwares Principais
+
+### Transmitter ESP32-C3 + MPU6050 + LED RGB Catodo
+
+Pasta:
 
 ```text
-SDA -> GPIO 8
-SCL -> GPIO 9
+firmware/transmitter_c3_mpu6050_rgb_catodo/
 ```
 
----
+Recursos:
 
-# Arduino IDE Setup
+- MPU6050 via I2C;
+- LED RGB catodo comum;
+- ESP-NOW em canal fixo;
+- envio em taxa fixa de 500 Hz;
+- pacote pequeno com `seq` e `timestampMicros`;
+- auto-calibracao por janela estavel;
+- DLPF no MPU6050 para reduzir ruido mecanico.
 
-## Install ESP32 Board Package
+### Transmitter ESP32-C3 Super Mini + BMI160 + LED RGB Catodo
 
-Arduino IDE → Preferences:
+Pasta:
 
 ```text
-https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+firmware/transmitter_c3_bmi160_rgb_catodo/
 ```
 
-Then install:
+Recursos:
 
-* ESP32 by Espressif Systems
+- BMI160 via I2C;
+- LED RGB catodo comum;
+- ESP-NOW em canal fixo;
+- envio em taxa fixa de 500 Hz;
+- pacote pequeno com `seq` e `timestampMicros`;
+- auto-calibracao por janela estavel.
 
----
+### Receiver ESP32-S3 Dual I2S CV02
 
-# Required Libraries
-
-The project uses libraries already included in the ESP32 package:
+Pasta:
 
 ```text
-WiFi.h
-esp_now.h
-Wire.h
-driver/i2s.h
-Adafruit_NeoPixel.h
+firmware/receiver_s3_i2s_dual_cv02/
 ```
 
-No additional external libraries are required.
+Recursos:
 
----
+- receiver ESP-NOW coordenando transmissores;
+- dois DACs I2S stereo independentes;
+- Deck A em `I2S_NUM_0`;
+- Deck B em `I2S_NUM_1`;
+- geracao CV02 em tempo real;
+- debug serial opcional.
 
-# Recommended Boards
+## Fluxo Basico
 
-Best setup:
+```text
+Transmitter Deck A/B
+        -> ESP-NOW
+Receiver ESP32-S3
+        -> I2S DAC A/B
+Mixer/interface DVS
+        -> Software DJ
+```
 
-* ESP32-C3 → transmitter
-* ESP32-S3 → receiver/audio
+## Aviso
 
-Mini versions also work well:
-
-* XIAO ESP32-S3
-* ESP32-S3 Zero
-* WeAct S3 Mini
-
----
-
-# Audio Configuration
-
-Current implementation:
-
-* 44.1kHz
-* 16-bit stereo WAV
-* Real-time interpolation
-* Low latency DMA buffers
-* Reverse playback support
-
----
-
-# ESP32 MAC Address Configuration
-
-Before using the system, you must discover the MAC address of the ESP32-S3 receiver board.
-
-The ESP32-C3 transmitter uses this MAC address to send RPM data through ESP-NOW.
-
-You must replace the receiver MAC address inside the ESP32-C3 transmitter code.
-
-
----
-
-# Project Goals
-
-* Create an affordable wireless DVS system
-* Learn about digital vinyl systems
-* Experiment with ESP32 real-time audio
-* Explore wireless scratch technology
-* Provide a platform for community improvements
-
-
----
-
-# Disclaimer
-
-This project is an independent DIY research project.
-
-It is not affiliated with, endorsed by, or associated with:
-
-* Phase DJ
-* Serato
-* Pioneer DJ
-* Native Instruments
-* any related company
-
-All trademarks belong to their respective owners.
-
----
-
-# License
-
-CC BY-NC-SA 4.0
-
-You are free to:
-
-* study
-* modify
-* share
-
-Under the following conditions:
-
-* attribution required
-* non-commercial use only
-* derivatives must use the same license
-
-Commercial use or resale is prohibited without explicit permission from the author.
+Projeto independente para pesquisa e aprendizado. Nao e afiliado a Phase DJ, Serato, VirtualDJ, Traktor, Pioneer DJ, Native Instruments ou qualquer outra marca citada.
