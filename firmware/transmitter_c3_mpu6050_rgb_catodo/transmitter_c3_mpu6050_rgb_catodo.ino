@@ -33,7 +33,7 @@
 #define MPU6050_REG_GYRO_ZOUT_H 0x47
 #define MPU6050_REG_PWR_MGMT_1 0x6B
 
-#define ESPNOW_CHANNEL 1
+#define ESPNOW_CHANNEL 11
 #define SEND_RATE_HZ 500
 #define SEND_INTERVAL_US (1000000UL / SEND_RATE_HZ)
 #define HANDSHAKE_INTERVAL_MS 250
@@ -53,7 +53,7 @@
 
 uint8_t receiverMAC[] = { 0xE0, 0x72, 0xA1, 0xD6, 0x4E, 0xF4 };
 
-float SMOOTHING = 0.16f;
+float SMOOTHING = 1.0f;
 float DEADZONE_RPM = 0.20f;
 float RPM_MULTIPLIER = 1.00f;
 
