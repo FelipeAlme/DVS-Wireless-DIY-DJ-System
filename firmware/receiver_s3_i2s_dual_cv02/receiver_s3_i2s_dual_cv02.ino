@@ -43,7 +43,7 @@
 // WELCOME e envia PING periodico para manter cada transmissor
 // conectado.
 // ------------------------------------------------------
-#define ESPNOW_CHANNEL 1
+#define ESPNOW_CHANNEL 11
 #define PROTOCOL_VERSION 1
 #define MSG_HELLO 1
 #define MSG_WELCOME 2
@@ -77,7 +77,7 @@
 #define BASE_RPM 33.333f
 #define DEADZONE_RPM 0.08f
 #define MAX_RPM_RATIO 3.0f
-#define RPM_SMOOTHING 0.22f
+#define RPM_SMOOTHING 0.80f
 #define OUTPUT_GAIN 0.70f
 
 // ------------------------------------------------------
@@ -135,7 +135,8 @@ typedef struct {
   int dataPin;
   const char *taskName;
   float filteredRpm;
-  float cv02Cycle;
+
+  uint32_t cv02Phase;
 } audio_deck_state;
 
 deck_state deckStates[2];
@@ -149,9 +150,13 @@ uint8_t cv02PackedBits[CV02_PACKED_BYTES];
 uint32_t lastDebugPrintMillis = 0;
 
 audio_deck_state audioDecks[2] = {
-  { 1, I2S_NUM_0, DAC_A_BCK_PIN, DAC_A_LRCK_PIN, DAC_A_DATA_PIN, "audioDeckA", 0.0f, 0.0f },
-  { 2, I2S_NUM_1, DAC_B_BCK_PIN, DAC_B_LRCK_PIN, DAC_B_DATA_PIN, "audioDeckB", 0.0f, 0.0f }
+  { 1, I2S_NUM_0, DAC_A_BCK_PIN, DAC_A_LRCK_PIN,
+    DAC_A_DATA_PIN, "audioDeckA", 0.0f, 0 },
+
+  { 2, I2S_NUM_1, DAC_B_BCK_PIN, DAC_B_LRCK_PIN,
+    DAC_B_DATA_PIN, "audioDeckB", 0.0f, 0 }
 };
+
 
 // ------------------------------------------------------
 // Inicializa a serial de debug.
@@ -399,57 +404,89 @@ void setupI2S(audio_deck_state *deck) {
 #endif
 }
 
-// ------------------------------------------------------
-// Mantem a fase CV02 dentro do tamanho da sequencia.
-// Suporta rotacao reversa quando o RPM fica negativo.
-// ------------------------------------------------------
-static inline void wrapCv02Cycle(float *cycle) {
-  while (*cycle >= (float)CV02_LENGTH) {
-    *cycle -= (float)CV02_LENGTH;
-  }
 
-  while (*cycle < 0.0f) {
-    *cycle += (float)CV02_LENGTH;
-  }
-}
 
 // ------------------------------------------------------
 // Converte RPM atual em um par stereo CV02.
 // Canal esquerdo usa -cos, canal direito usa seno, seguindo
 // o mesmo formato gerado no app Bridge.
 // ------------------------------------------------------
-static inline void renderCv02Sample(audio_deck_state *deck, float rpm, int16_t *leftOut, int16_t *rightOut) {
-  float rpmRatio = rpm / BASE_RPM;
+static inline void renderCv02Sample(
+  audio_deck_state *deck,
+  float rpm,
+  int16_t *leftOut,
+  int16_t *rightOut
+) {
 
-  if (fabsf(rpm) < DEADZONE_RPM) {
-    rpmRatio = 0.0f;
-  }
+  float ratio =
+    rpm / BASE_RPM;
 
-  if (rpmRatio > MAX_RPM_RATIO) {
-    rpmRatio = MAX_RPM_RATIO;
-  }
+  if(fabsf(ratio) < DEADZONE_RPM)
+    ratio = 0.0f;
 
-  if (rpmRatio < -MAX_RPM_RATIO) {
-    rpmRatio = -MAX_RPM_RATIO;
-  }
+  if(ratio > MAX_RPM_RATIO)
+    ratio = MAX_RPM_RATIO;
 
-  float step = ((float)CV02_RESOLUTION / (float)SAMPLE_RATE) * rpmRatio;
-  deck->cv02Cycle += step;
-  wrapCv02Cycle(&deck->cv02Cycle);
+  if(ratio < -MAX_RPM_RATIO)
+    ratio = -MAX_RPM_RATIO;
 
-  uint32_t cycleIndex = (uint32_t)deck->cv02Cycle;
-  float frac = deck->cv02Cycle - (float)cycleIndex;
-  float angle = frac * 6.28318530718f;
-  float sine = sinf(angle);
-  float cosine = cosf(angle);
-  uint8_t bit = getPackedBit(cycleIndex);
-  float modulation = bit != 0 ? 1.0f : 1.0f - ((-cosine + 1.0f) * 0.25f);
+  int32_t phaseStep =
+    (int32_t)(
+      ratio *
+      (
+        (float)CV02_RESOLUTION
+        * 65536.0f
+        / SAMPLE_RATE
+      )
+    );
 
-  float left = -cosine * modulation * OUTPUT_GAIN;
-  float right = sine * modulation * OUTPUT_GAIN;
+  deck->cv02Phase += phaseStep;
 
-  *leftOut = (int16_t)constrain(lroundf(left * 32767.0f), -32768, 32767);
-  *rightOut = (int16_t)constrain(lroundf(right * 32767.0f), -32768, 32767);
+  uint32_t cycleIndex =
+    (deck->cv02Phase >> 16)
+    % CV02_LENGTH;
+
+  float frac =
+    (deck->cv02Phase & 0xFFFF)
+    / 65536.0f;
+
+  float angle =
+    frac * 6.28318530718f;
+
+  float sine =
+    sinf(angle);
+
+  float cosine =
+    cosf(angle);
+
+  uint8_t bit =
+    getPackedBit(cycleIndex);
+
+  float modulation =
+    bit
+      ? 1.0f
+      : 1.0f -
+        ((-cosine + 1.0f) * 0.25f);
+
+  float left =
+    -cosine
+    * modulation
+    * OUTPUT_GAIN;
+
+  float right =
+    sine
+    * modulation
+    * OUTPUT_GAIN;
+
+  *leftOut =
+    (int16_t)(
+      left * 32767.0f
+    );
+
+  *rightOut =
+    (int16_t)(
+      right * 32767.0f
+    );
 }
 
 // ------------------------------------------------------
